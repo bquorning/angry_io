@@ -24,7 +24,6 @@ Gem::Specification.new do |spec|
     LICENSE.txt
     README.md
     lib/angry_io.rb
-    lib/angry_io/enable_for_ci_true.rb
     lib/angry_io/minitest.rb
     lib/angry_io/rspec.rb
     lib/angry_io/version.rb

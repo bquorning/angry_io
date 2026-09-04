@@ -13,10 +13,9 @@ module AngryIo
     end
   end
 
-  Config = Struct.new(:enabled, :opt_out_metadata) do
+  Config = Struct.new(:enabled) do
     def initialize
       self.enabled = -> { true }
-      self.opt_out_metadata = :i_absolutely_need_to_write_to_stdout
     end
   end
 

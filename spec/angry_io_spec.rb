@@ -21,12 +21,9 @@ RSpec.describe AngryIo do
 
   describe ".configure" do
     it "yields the config and persists changes" do
-      AngryIo.configure { |c| c.opt_out_metadata = :tmp }
-      expect(AngryIo.config.opt_out_metadata).to eq(:tmp)
-    end
-
-    after do
-      AngryIo.configure { |c| c.opt_out_metadata = :i_absolutely_need_to_write_to_stdout }
+      maybe = -> { rand(2) == 0 }
+      AngryIo.configure { |c| c.enabled = maybe }
+      expect(AngryIo.config.enabled).to eq(maybe)
     end
   end
 end

@@ -4,15 +4,13 @@ Friends don't let friends write tests or specs that outputs to stdout/stderr. Wh
 
 AngryIo replaces `$stdout` and `$stderr` during your test suite with an IO that _raises on write_, so accidental output fails loudly instead of quietly cluttering your output. It ships self-registering adapters for both RSpec and Minitest, gated by a configurable `enabled` callable.
 
-The name and the default opt-out metadata are a nod to [minitest](https://github.com/minitest/minitest)'s `i_suck_and_my_tests_are_order_dependent!`.
-
 ## Installation
 
 Add to your application's Gemfile:
 
 ```ruby
 group :test do
-  gem "angry_io", require: "angry_io/enable_for_ci_true"
+  gem "angry_io"
 end
 ```
 
@@ -24,17 +22,26 @@ gem install angry_io
 
 ## Usage
 
-The simplest setup is to point the Gemfile `require:` at `angry_io/enable_for_ci_true`. That file turns AngryIo on only when the `CI` environment variable is `"true"` — a convention set by GitHub Actions, GitLab CI, CircleCI, Travis, and others — and wires up whichever test framework is loaded (RSpec or Minitest); the other is a no-op.
+Depending on your test framework, you should require either `angry_io/rspec` or `angry_io/minitest`:
 
 ```ruby
-# Gemfile
-gem "angry_io", require: "angry_io/enable_for_ci_true"
+# spec_helper.rb (RSpec) or test_helper.rb (Minitest)
+require "angry_io/rspec"      # or "angry_io/minitest"
 ```
 
-That's it. Under `CI=true`, every test that writes to `$stdout` or `$stderr` raises:
+By default, AngryIo is always on, and every test that writes to `$stdout` or `$stderr` now raises:
 
 ```
 IOError: not opened for writing
+```
+
+If you want to allow test output in some environments but not in others - e.g allow output when testing locally, but fail on CI - you can configure like this:
+
+```ruby
+# On by default; turn it off in environments where you'll allow real output.
+AngryIo.configure do |config|
+  config.enabled = -> { ENV["CI"] == "true" }
+end
 ```
 
 ### Opting out
@@ -59,22 +66,6 @@ class PrintTest < Minitest::Test
 end
 ```
 
-### Manual setup
-
-If you'd rather control the gate yourself, require an adapter directly. `enabled` defaults to always-on, so it's most useful as a kill switch for environments where you need real output:
-
-```ruby
-# spec_helper.rb (RSpec) or test_helper.rb (Minitest)
-require "angry_io/rspec"      # or "angry_io/minitest"
-
-# On by default; turn it off in environments where you need real output.
-AngryIo.configure do |config|
-  config.enabled = -> { ENV["ANGRY_IO"] != "off" }
-end
-```
-
-Requiring `angry_io/rspec` or `angry_io/minitest` self-registers the hook if that framework is loaded; requiring plain `angry_io` gives you just the `AngryIo::Stream` class with no side effects.
-
 ## Configuration
 
 `AngryIo.configure` yields a config struct with two fields:
@@ -82,7 +73,6 @@ Requiring `angry_io/rspec` or `angry_io/minitest` self-registers the hook if tha
 | Field              | Default                                 | Description                                                                                                           |
 | ---                | ---                                     | ---                                                                                                                   |
 | `enabled`          | `-> { true }`                           | A callable returning whether AngryIo is active. Invoked once per test, so it can read env vars or feature flags live. |
-| `opt_out_metadata` | `:i_absolutely_need_to_write_to_stdout` | The RSpec metadata symbol that opts an example out.                                                                   |
 
 ## How it works
 

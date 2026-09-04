@@ -4,10 +4,8 @@ require "angry_io"
 
 # Prepends an override of +Minitest::Test#run+ that swaps $stdout/$stderr to
 # AngryIo::Stream instances around each test. A test class opts out by calling
-# +i_absolutely_need_to_write_to_stdout!+ in its body — a nod to minitest's own
-# +i_suck_and_my_tests_are_order_dependent!+. Force-loads Minitest so
-# registration works regardless of Bundler.require ordering; no-op if Minitest
-# isn't installed.
+# +i_absolutely_need_to_write_to_stdout!+ in its body. Force-loads Minitest so
+# registration works regardless of Bundler.require ordering.
 module AngryIo
   module Minitest
     module Adapter
@@ -34,9 +32,5 @@ module AngryIo
   end
 end
 
-begin
-  require "minitest"
-  AngryIo::Minitest.setup!
-rescue LoadError
-  # Minitest isn't installed; nothing to wire up.
-end
+require "minitest"
+AngryIo::Minitest.setup!
