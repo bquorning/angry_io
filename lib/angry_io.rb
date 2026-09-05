@@ -47,7 +47,7 @@ module AngryIO
   module WarnGuard
     def warn(*messages, **options)
       result = super
-      AngryIO.check_output!($stderr, messages)
+      AngryIO.check_output!($stderr, messages.map { |m| m.to_s.empty? ? "\n" : m })
       result
     end
   end
@@ -92,8 +92,9 @@ module AngryIO
     end
 
     # Called by Guard (and the warn intercepts) after a write has gone through
-    # to the real stream. Raises IOError if the guard is armed and the target
-    # is one of the guarded streams. A $stdout/$stderr the user rebound to
+    # to the real stream. Raises IOError if the guard is armed, the target is
+    # one of the guarded streams, and the write would actually emit output
+    # (zero-byte writes are allowed). A $stdout/$stderr the user rebound to
     # another object (e.g. capture_io's StringIO) is not guarded, so writes to
     # it are fine.
     # standard:disable Style/GlobalStdStream — we mean the real stream objects, not the globals
@@ -101,8 +102,11 @@ module AngryIO
       return unless armed?
       return unless io.equal?(STDOUT) || io.equal?(STDERR)
 
+      offending = strings.map(&:to_s).reject(&:empty?)
+      return if offending.empty?
+
       name = io.equal?(STDOUT) ? "$stdout" : "$stderr"
-      raise IOError, "AngryIO: a test wrote to #{name}: #{strings.join.inspect}"
+      raise IOError, "AngryIO: a test wrote to #{name}: #{offending.join.inspect}"
     end
     # standard:enable Style/GlobalStdStream
   end

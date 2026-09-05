@@ -64,6 +64,15 @@ class TestAngryIO < Minitest::Test
     assert_match(/boom/, error.message)
   end
 
+  def test_zero_byte_writes_are_allowed
+    $stdout.write("")
+    $stdout.print("")
+    $stdout.printf("")
+    $stdout << ""
+    $stdout.syswrite("")
+    $stderr.print("")
+  end
+
   # A logger created before the test started holds a reference to the real
   # STDOUT object. Because the guard lives on that object (not on the $stdout
   # global), logger writes are caught too.

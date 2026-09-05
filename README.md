@@ -36,6 +36,8 @@ your output here
 IOError: AngryIO: a test wrote to $stdout: "your output here"
 ```
 
+Zero-byte writes (e.g. `$stderr.print("")`) emit nothing, so they are allowed.
+
 If you want to allow test output in some environments but not in others — e.g., fail on CI, but allow output when testing locally so REPL debuggers like `binding.irb` or `pry` work — set the `enabled` predicate:
 
 ```ruby
@@ -85,7 +87,7 @@ end
 
 ## How it works
 
-At load time, AngryIO prepends a small guard module onto the `STDOUT` and `STDERR` objects, overriding their write methods. Around each test, the adapter arms the guard via a thread-local flag, and disarms it in an `ensure`. When armed, a write passes through to the real stream and then raises an `IOError`.
+At load time, AngryIO prepends a small guard module onto the `STDOUT` and `STDERR` objects, overriding their write methods. Around each test, the adapter arms the guard via a thread-local flag, and disarms it in an `ensure`. When armed, a write passes through to the real stream and then raises an `IOError`; zero-byte writes (e.g. `$stderr.print("")`) emit nothing and are allowed.
 
 Guarding the stream objects — rather than swapping the `$stdout`/`$stderr` globals — means anything holding a reference to the real streams (like a `Logger.new($stdout)` from boot time) is guarded too. `Kernel#warn` and `Warning.warn` write to stderr at C level without dispatching to `$stderr#write`, so AngryIO intercepts them at the source as well.
 

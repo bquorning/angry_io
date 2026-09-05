@@ -29,6 +29,15 @@ RSpec.describe AngryIO do
     expect { warn "x" }.to raise_error(IOError, /\$stderr/)
   end
 
+  it "allows zero-byte writes" do
+    $stdout.write("")
+    $stdout.print("")
+    $stdout.printf("")
+    $stdout << ""
+    $stdout.syswrite("")
+    $stderr.print("")
+  end
+
   it "does not arm when opted out", :i_absolutely_need_to_write_to_stdout do
     expect(AngryIO.armed?).to be(false)
   end
