@@ -38,6 +38,16 @@ module AngryIO
       AngryIO.check_output!(self, [char])
       result
     end
+
+    # `reopen(other_io)` turns the receiver into a copy of the other IO,
+    # replacing its singleton class — which strips this very module off the
+    # stream (a path reopen keeps it). Re-prepend afterwards so the guard
+    # survives the reopen; a no-op when the module is still present.
+    def reopen(*args)
+      result = super
+      singleton_class.prepend(AngryIO::Guard)
+      result
+    end
   end
 
   # Kernel#warn writes to stderr at C level without dispatching to
@@ -82,6 +92,18 @@ module AngryIO
       ensure
         Thread.current.thread_variable_set(:angry_io_armed, previous_armed)
       end
+    end
+
+    # Run the block with the guard disarmed. Helpers like Minitest's
+    # capture_subprocess_io or RSpec's from_any_process matchers need this: they
+    # redirect the streams on purpose, so the block's writes are captured, not
+    # errors.
+    def disarmed
+      previous = Thread.current.thread_variable_get(:angry_io_armed)
+      Thread.current.thread_variable_set(:angry_io_armed, false)
+      yield
+    ensure
+      Thread.current.thread_variable_set(:angry_io_armed, previous)
     end
 
     # Whether the write-guard is armed on the current thread. The flag is

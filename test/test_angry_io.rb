@@ -19,21 +19,24 @@ class TestAngryIO < Minitest::Test
   end
 
   def test_around_streams_arms_and_restores
-    states = Thread.new {
-      inside = nil
-      AngryIO.around_streams { inside = AngryIO.armed? }
-      [inside, AngryIO.armed?]
-    }.value
-    assert_equal [true, false], states
+    AngryIO.disarmed do
+      refute AngryIO.armed?
+      AngryIO.around_streams { assert AngryIO.armed? }
+      refute AngryIO.armed?
+    end
   end
 
   def test_around_streams_noop_when_opted_out
-    refute Thread.new { AngryIO.around_streams(opted_out: true) { AngryIO.armed? } }.value
+    AngryIO.disarmed do
+      AngryIO.around_streams(opted_out: true) { refute AngryIO.armed? }
+    end
   end
 
   def test_around_streams_noop_when_disabled
     AngryIO.enabled = -> { false }
-    refute Thread.new { AngryIO.around_streams { AngryIO.armed? } }.value
+    AngryIO.disarmed do
+      AngryIO.around_streams { refute AngryIO.armed? }
+    end
   ensure
     AngryIO.enabled = -> { true }
   end
@@ -82,10 +85,67 @@ class TestAngryIO < Minitest::Test
     assert_raises(IOError) { BOOT_LOGGER << "sneaky\n" }
   end
 
+  def test_disarmed_allows_output_for_the_block
+    AngryIO.disarmed do
+      refute AngryIO.armed?
+      $stdout.write("")
+    end
+    assert AngryIO.armed?
+  end
+
+  # A nested disarmed block must not re-arm the guard for the outer block.
+  def test_disarmed_is_reentrant
+    AngryIO.disarmed do
+      AngryIO.disarmed { refute AngryIO.armed? }
+      refute AngryIO.armed?
+    end
+    assert AngryIO.armed?
+  end
+
   # The arming flag is tracked per thread (not per fiber), so code running
   # inside a Fiber — e.g. Enumerator-based code — sees the same state.
   def test_guard_state_works_across_fibers
     assert Fiber.new { AngryIO.armed? }.resume
+    refute Fiber.new { AngryIO.disarmed { AngryIO.armed? } }.resume
+  end
+
+  def test_capture_subprocess_io_works_inside_a_fiber
+    out = Fiber.new { capture_subprocess_io { system("echo hello") }.first }.resume
+    assert_equal "hello\n", out
+  end
+
+  def test_capture_subprocess_io_captures_and_restores
+    out, err = capture_subprocess_io do
+      refute AngryIO.armed?
+      system("echo hello")
+      warn "warning"
+    end
+    assert_equal "hello\n", out
+    assert_equal "warning\n", err
+    assert AngryIO.armed?
+  end
+
+  # capture_io replaces the globals outright (no reopen), so it already works:
+  # writes inside the block land in Minitest's unguarded StringIOs.
+  def test_capture_io_captures_and_restores
+    out, err = capture_io do
+      $stdout.puts "hello"
+      $stderr.puts "warning" # rubocop:disable Style/StderrPuts
+    end
+    assert_equal "hello\n", out
+    assert_equal "warning\n", err
+    assert AngryIO.armed?
+  end
+
+  def test_assert_output
+    assert_output("hello\n", "warning\n") do
+      $stdout.puts "hello"
+      $stderr.puts "warning" # rubocop:disable Style/StderrPuts
+    end
+  end
+
+  def test_assert_silent
+    assert_silent { nil }
   end
 end
 

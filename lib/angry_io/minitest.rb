@@ -24,9 +24,20 @@ module AngryIO
       end
     end
 
+    # capture_subprocess_io reopens $stdout/$stderr onto Tempfiles so
+    # subprocesses inherit the file descriptors — a deliberate redirect whose
+    # output is captured, not pollution. Disarm the guard for the duration of
+    # the capture.
+    module CaptureSubprocessIo
+      def capture_subprocess_io(&block)
+        AngryIO.disarmed { super }
+      end
+    end
+
     def self.setup!
       ::Minitest::Test.extend(ClassMethods)
       ::Minitest::Test.prepend(Adapter)
+      ::Minitest::Assertions.prepend(CaptureSubprocessIo)
     end
   end
 end

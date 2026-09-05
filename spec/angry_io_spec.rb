@@ -47,6 +47,25 @@ RSpec.describe AngryIO do
     expect { BOOT_LOGGER << "sneaky\n" }.to raise_error(IOError, /sneaky/)
   end
 
+  describe "output matcher with from_any_process" do
+    it "captures subprocess stdout" do
+      expect { system("echo hello") }.to output("hello\n").to_stdout_from_any_process
+    end
+
+    it "captures subprocess stderr" do
+      expect { system("echo oops >&2") }.to output("oops\n").to_stderr_from_any_process
+    end
+
+    it "captures Ruby-level writes inside the block" do
+      expect { $stdout.puts "hi" }.to output("hi\n").to_stdout_from_any_process
+    end
+
+    it "re-arms the guard afterwards" do
+      expect { system("true") }.to output("").to_stdout_from_any_process
+      expect(AngryIO.armed?).to be(true)
+    end
+  end
+
   describe ".enabled" do
     it "is settable and persists changes" do
       maybe = -> { rand(2) == 0 }
