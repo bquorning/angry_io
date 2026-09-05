@@ -1,6 +1,9 @@
 ## [Unreleased]
 
+## [0.3.0] - 2026-09-06
+
 - Zero-byte writes (e.g. `$stderr.print("")`) no longer raise; `AngryIo::Stream` now raises only when a write would actually emit output. The error message changed from StringIO's `not opened for writing` to `AngryIo::Stream is not writable: ...`, which includes the offending output.
+- Minitest's `capture_subprocess_io` and RSpec's `to_stdout_from_any_process` / `to_stderr_from_any_process` matchers now work alongside AngryIo. These helpers reopen `$stdout`/`$stderr` onto Tempfiles so subprocesses inherit the file descriptors, which fails on the StringIO-based `AngryIo::Stream`; AngryIo now restores the real streams for their duration via a new `AngryIo.with_real_streams` helper.
 
 ## [0.2.0] - 2026-09-04
 
