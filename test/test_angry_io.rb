@@ -11,6 +11,20 @@ class TestAngryIo < Minitest::Test
     assert_raises(IOError) { AngryIo::Stream.new.puts("x") }
   end
 
+  def test_stream_raises_on_putc
+    assert_raises(IOError) { AngryIo::Stream.new.putc("x") }
+  end
+
+  def test_stream_allows_zero_byte_writes
+    stream = AngryIo::Stream.new
+    stream.write("")
+    stream.print("")
+    stream.printf("")
+    stream << ""
+    stream.syswrite("")
+    assert_predicate stream.string, :empty?
+  end
+
   def test_config_defaults
     config = AngryIo::Config.new
     assert config.enabled.call
