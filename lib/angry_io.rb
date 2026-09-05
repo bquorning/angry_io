@@ -59,14 +59,38 @@ module AngryIo
       stderr_buffer = Stream.new
       $stdout = stdout_buffer
       $stderr = stderr_buffer
+      previous_swap = Thread.current.thread_variable_get(:angry_io_swap)
+      Thread.current.thread_variable_set(:angry_io_swap, [original_stdout, original_stderr, stdout_buffer, stderr_buffer])
 
       begin
         yield
       ensure
+        Thread.current.thread_variable_set(:angry_io_swap, previous_swap)
         $stdout = original_stdout
         $stderr = original_stderr
         stdout_buffer.close
         stderr_buffer.close
+      end
+    end
+
+    # Run the block with the pre-swap $stdout/$stderr restored, re-swapping the
+    # AngryIo::Stream buffers afterwards. Helpers like Minitest's
+    # capture_subprocess_io need this: they reopen $stdout/$stderr onto
+    # Tempfiles so subprocesses inherit the file descriptors, which only works
+    # on real IOs. No-ops when no swap is active.
+    def with_real_streams
+      swap = Thread.current.thread_variable_get(:angry_io_swap)
+      return yield unless swap
+
+      real_stdout, real_stderr, stdout_buffer, stderr_buffer = swap
+      $stdout = real_stdout
+      $stderr = real_stderr
+
+      begin
+        yield
+      ensure
+        $stdout = stdout_buffer
+        $stderr = stderr_buffer
       end
     end
   end

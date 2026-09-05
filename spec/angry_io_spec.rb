@@ -33,11 +33,33 @@ RSpec.describe AngryIo do
     expect($stdout).not_to be_an(AngryIo::Stream)
   end
 
+  describe "output matcher with from_any_process" do
+    it "captures subprocess stdout" do
+      expect { system("echo hello") }.to output("hello\n").to_stdout_from_any_process
+    end
+
+    it "captures subprocess stderr" do
+      expect { system("echo oops >&2") }.to output("oops\n").to_stderr_from_any_process
+    end
+
+    it "captures Ruby-level writes inside the block" do
+      expect { $stdout.puts "hi" }.to output("hi\n").to_stdout_from_any_process
+    end
+
+    it "restores the AngryIo::Stream afterwards" do
+      expect { system("true") }.to output("").to_stdout_from_any_process
+      expect($stdout).to be_an(AngryIo::Stream)
+    end
+  end
+
   describe ".configure" do
     it "yields the config and persists changes" do
       maybe = -> { rand(2) == 0 }
       AngryIo.configure { |c| c.enabled = maybe }
       expect(AngryIo.config.enabled).to eq(maybe)
+    ensure
+      # Restore the default so later examples don't randomly run unswapped.
+      AngryIo.configure { |c| c.enabled = -> { true } }
     end
   end
 end
