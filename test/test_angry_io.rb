@@ -58,6 +58,62 @@ class TestAngryIo < Minitest::Test
   def test_minitest_adapter_swaps_stdout_during_test
     assert_kind_of AngryIo::Stream, $stdout
   end
+
+  def test_with_real_streams_restores_outer_streams
+    adapter_stream = $stdout
+    AngryIo.around_streams do
+      seen = nil
+      AngryIo.with_real_streams { seen = $stdout }
+      assert_same adapter_stream, seen
+      assert_kind_of AngryIo::Stream, $stdout
+      refute_same adapter_stream, $stdout
+    end
+  end
+
+  # The swap is tracked per thread (not per fiber), so captures running inside
+  # a Fiber — e.g. Enumerator-based code — still see it.
+  def test_with_real_streams_works_across_fibers
+    seen = Fiber.new { AngryIo.with_real_streams { $stdout } }.resume
+    refute_kind_of AngryIo::Stream, seen
+  end
+
+  def test_capture_subprocess_io_works_inside_a_fiber
+    out = Fiber.new { capture_subprocess_io { system("echo hello") }.first }.resume
+    assert_equal "hello\n", out
+  end
+
+  def test_capture_subprocess_io_captures_and_restores
+    out, err = capture_subprocess_io do
+      system("echo hello")
+      warn "warning"
+    end
+    assert_equal "hello\n", out
+    assert_equal "warning\n", err
+    assert_kind_of AngryIo::Stream, $stdout
+  end
+
+  # capture_io replaces the globals outright (no reopen), so it already works:
+  # writes inside the block land in Minitest's StringIOs, not the Angry stream.
+  def test_capture_io_captures_and_restores
+    out, err = capture_io do
+      $stdout.puts "hello"
+      $stderr.puts "warning"
+    end
+    assert_equal "hello\n", out
+    assert_equal "warning\n", err
+    assert_kind_of AngryIo::Stream, $stdout
+  end
+
+  def test_assert_output
+    assert_output("hello\n", "warning\n") do
+      $stdout.puts "hello"
+      $stderr.puts "warning"
+    end
+  end
+
+  def test_assert_silent
+    assert_silent { nil }
+  end
 end
 
 # A class that opts out by declaring it needs stdout, proving the mechanism.

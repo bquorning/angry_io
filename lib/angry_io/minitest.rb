@@ -24,10 +24,20 @@ module AngryIo
       end
     end
 
+    # capture_subprocess_io reopens $stdout/$stderr onto Tempfiles so
+    # subprocesses inherit the file descriptors, which fails on StringIO-based
+    # streams. A test calling it captures output on purpose, so restore the
+    # real streams for the duration of the capture.
+    module CaptureSubprocessIo
+      def capture_subprocess_io(&block)
+        AngryIo.with_real_streams { super }
+      end
+    end
+
     def self.setup!
-      test = ::Minitest::Test
-      test.extend(ClassMethods)
-      test.prepend(Adapter)
+      ::Minitest::Test.extend(ClassMethods)
+      ::Minitest::Test.prepend(Adapter)
+      ::Minitest::Assertions.prepend(CaptureSubprocessIo)
     end
   end
 end

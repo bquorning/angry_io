@@ -12,6 +12,11 @@ describe "AngryIo in spec format" do
   it "swaps stderr during the example" do
     expect($stderr).must_be_kind_of AngryIo::Stream
   end
+
+  it "supports must_output expectations" do
+    _ { $stdout.puts "hello" }.must_output "hello\n"
+    expect($stdout).must_be_kind_of AngryIo::Stream
+  end
 end
 
 describe "Opting out in spec format" do
