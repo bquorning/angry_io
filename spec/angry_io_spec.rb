@@ -9,6 +9,20 @@ RSpec.describe AngryIo do
     expect { AngryIo::Stream.new.puts("x") }.to raise_error(IOError)
   end
 
+  it "raises on putc" do
+    expect { AngryIo::Stream.new.putc("x") }.to raise_error(IOError)
+  end
+
+  it "allows zero-byte writes" do
+    stream = AngryIo::Stream.new
+    stream.write("")
+    stream.print("")
+    stream.printf("")
+    stream << ""
+    stream.syswrite("")
+    expect(stream.string).to be_empty
+  end
+
   # The RSpec adapter (loaded in spec_helper) wraps every example, so $stdout
   # is an AngryIo::Stream for the duration of this example.
   it "swaps $stdout to an AngryIo::Stream during the example" do

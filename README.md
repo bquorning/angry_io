@@ -32,8 +32,10 @@ require "angry_io/rspec"      # or "angry_io/minitest"
 By default, AngryIo is always on, and every test that writes to `$stdout` or `$stderr` now raises:
 
 ```
-IOError: not opened for writing
+IOError: AngryIo::Stream is not writable: "your output here"
 ```
+
+Zero-byte writes (e.g. `$stderr.print("")`) emit nothing, so they are allowed.
 
 If you want to allow test output in some environments but not in others — e.g., allow output when testing locally, but fail on CI — you can configure like this:
 
@@ -89,7 +91,7 @@ end
 
 ## How it works
 
-`AngryIo::Stream` is a `StringIO` backed by a frozen empty string, which makes `StringIO` refuse writes with an `IOError`. Around each test, the adapter swaps `$stdout` and `$stderr` to fresh `AngryIo::Stream` instances and restores the originals (closing the buffers) in an `ensure`.
+`AngryIo::Stream` is a `StringIO` whose write methods raise an `IOError` when given anything but an empty string. Around each test, the adapter swaps `$stdout` and `$stderr` to fresh `AngryIo::Stream` instances and restores the originals (closing the buffers) in an `ensure`.
 
 ## Development
 

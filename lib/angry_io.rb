@@ -5,11 +5,28 @@ require_relative "angry_io/version"
 
 module AngryIo
   # An IO that raises when you write to it, so tests can't silently pollute
-  # stdout/stderr. Backed by a frozen empty string, which makes StringIO
-  # refuse writes with an IOError ("not opened for writing").
+  # stdout/stderr. Zero-byte writes like `$stderr.print("")` emit nothing and
+  # are allowed; anything that would produce output raises an IOError.
   class Stream < StringIO
     def initialize
-      super(-"")
+      super(+"")
+    end
+
+    # StringIO's print, puts, printf, <<, syswrite and write_nonblock all
+    # funnel through #write, so this one guard catches them.
+    def write(*strings)
+      strings.each do |string|
+        next if string.to_s.empty?
+
+        raise IOError, "AngryIo::Stream is not writable: #{string.to_s.inspect}"
+      end
+      super
+    end
+
+    # StringIO#putc writes directly in C, bypassing #write. It always emits a
+    # byte, so it always refuses.
+    def putc(char)
+      raise IOError, "AngryIo::Stream is not writable: #{char.inspect}"
     end
   end
 
