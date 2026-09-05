@@ -66,6 +66,19 @@ class PrintTest < Minitest::Test
 end
 ```
 
+The same call works in Minitest's spec format, inside the `describe` block:
+
+```ruby
+# Minitest spec format — opt out a whole describe block
+describe "printing" do
+  i_absolutely_need_to_write_to_stdout!
+
+  it "prints" do
+    puts "ok"
+  end
+end
+```
+
 ## Configuration
 
 `AngryIO.enabled` is a callable returning whether AngryIO is active. It defaults to `-> { true }` and is invoked once per test, so it can read env vars or feature flags live — e.g. `-> { ENV["CI"] == "true" }` to enforce on CI while leaving local debuggers usable.
