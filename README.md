@@ -1,6 +1,6 @@
 # AngryIo
 
-Friends don't let friends write tests or specs that outputs to stdout/stderr. When you look at your test output, you should only see green dots, right?
+Friends don't let friends write tests or specs that output to stdout/stderr. When you look at your test output, you should only see green dots, right?
 
 AngryIo replaces `$stdout` and `$stderr` during your test suite with an IO that _raises on write_, so accidental output fails loudly instead of quietly cluttering your output. It ships self-registering adapters for both RSpec and Minitest, gated by a configurable `enabled` callable.
 
@@ -35,7 +35,7 @@ By default, AngryIo is always on, and every test that writes to `$stdout` or `$s
 IOError: not opened for writing
 ```
 
-If you want to allow test output in some environments but not in others - e.g allow output when testing locally, but fail on CI - you can configure like this:
+If you want to allow test output in some environments but not in others — e.g., allow output when testing locally, but fail on CI — you can configure like this:
 
 ```ruby
 # On by default; turn it off in environments where you'll allow real output.
@@ -66,9 +66,22 @@ class PrintTest < Minitest::Test
 end
 ```
 
+The same call works in Minitest's spec format, inside the `describe` block:
+
+```ruby
+# Minitest spec format — opt out a whole describe block
+describe "printing" do
+  i_absolutely_need_to_write_to_stdout!
+
+  it "prints" do
+    puts "ok"
+  end
+end
+```
+
 ## Configuration
 
-`AngryIo.configure` yields a config struct with two fields:
+`AngryIo.configure` yields a config struct with one field:
 
 | Field              | Default                                 | Description                                                                                                           |
 | ---                | ---                                     | ---                                                                                                                   |
