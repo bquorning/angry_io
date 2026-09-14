@@ -8,4 +8,5 @@ gem "minitest", "~> 6"
 gem "minitest-rg"
 gem "rake", "~> 13.0"
 gem "rspec", "~> 3.12"
+gem "simplecov", "~> 1", require: false
 gem "standard", "~> 1.3"
