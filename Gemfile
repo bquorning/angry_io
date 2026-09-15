@@ -4,6 +4,7 @@ source "https://rubygems.org"
 
 gemspec
 
+gem "activesupport", require: false
 gem "minitest", "~> 6"
 gem "minitest-rg"
 gem "rake", "~> 13.0"
