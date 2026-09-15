@@ -38,6 +38,7 @@ module AngryIO
       ::Minitest::Test.extend(ClassMethods)
       ::Minitest::Test.prepend(Adapter)
       ::Minitest::Assertions.prepend(CaptureSubprocessIo)
+      AngryIO.hook_active_support_stream!
     end
   end
 end

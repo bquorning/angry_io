@@ -39,13 +39,20 @@ module AngryIO
       result
     end
 
-    # `reopen(other_io)` turns the receiver into a copy of the other IO,
+    # Reopening the stream (e.g. `$stdout.reopen(File::NULL)` after a fork) is
+    # a deliberate redirect of the process's output: let it through and release
+    # this stream from the guard for the rest of the test, so subsequent writes
+    # reach the reopened target instead of raising. A failed reopen raises
+    # before releasing, so the guard stays in place.
+    #
+    # `reopen(other_io)` also turns the receiver into a copy of the other IO,
     # replacing its singleton class — which strips this very module off the
-    # stream (a path reopen keeps it). Re-prepend afterwards so the guard
-    # survives the reopen; a no-op when the module is still present.
+    # stream. Re-prepend it afterwards so the guard survives; a no-op when the
+    # module is still present (e.g. after a path reopen).
     def reopen(*args)
       result = super
       singleton_class.prepend(AngryIO::Guard)
+      AngryIO.release!(self) if AngryIO.armed?
       result
     end
   end
@@ -72,6 +79,23 @@ module AngryIO
     end
   end
 
+  # ActiveSupport::Testing::Stream#capture reopens $stdout/$stderr onto a
+  # Tempfile and #silence_stream reopens onto IO::NULL — deliberate redirects
+  # whose block output is captured or silenced on purpose, not test pollution.
+  # Disarm the guard for the duration, the same way Minitest's
+  # capture_subprocess_io is handled.
+  module ActiveSupportStreamCapture
+    def capture(stream)
+      AngryIO.disarmed { super }
+    end
+
+    def silence_stream(stream)
+      AngryIO.disarmed { super }
+    end
+
+    private :capture, :silence_stream
+  end
+
   @enabled = -> { true }
 
   class << self
@@ -85,19 +109,21 @@ module AngryIO
       return yield unless enabled.call
 
       previous_armed = Thread.current.thread_variable_get(:angry_io_armed)
+      previous_released = Thread.current.thread_variable_get(:angry_io_released)
       Thread.current.thread_variable_set(:angry_io_armed, true)
+      Thread.current.thread_variable_set(:angry_io_released, [])
 
       begin
         yield
       ensure
         Thread.current.thread_variable_set(:angry_io_armed, previous_armed)
+        Thread.current.thread_variable_set(:angry_io_released, previous_released)
       end
     end
 
     # Run the block with the guard disarmed. Helpers like Minitest's
-    # capture_subprocess_io or RSpec's from_any_process matchers need this: they
-    # redirect the streams on purpose, so the block's writes are captured, not
-    # errors.
+    # capture_subprocess_io or ActiveSupport's capture need this: they redirect
+    # the streams on purpose, so the block's writes are captured, not errors.
     def disarmed
       previous = Thread.current.thread_variable_get(:angry_io_armed)
       Thread.current.thread_variable_set(:angry_io_armed, false)
@@ -113,16 +139,24 @@ module AngryIO
       Thread.current.thread_variable_get(:angry_io_armed) || false
     end
 
+    # Release a stream from the guard for the rest of the surrounding test
+    # (see Guard#reopen).
+    def release!(io)
+      released = Thread.current.thread_variable_get(:angry_io_released)
+      released << io if released && !released.include?(io)
+    end
+
     # Called by Guard (and the warn intercepts) after a write has gone through
     # to the real stream. Raises IOError if the guard is armed, the target is
-    # one of the guarded streams, and the write would actually emit output
-    # (zero-byte writes are allowed). A $stdout/$stderr the user rebound to
-    # another object (e.g. capture_io's StringIO) is not guarded, so writes to
-    # it are fine.
+    # one of the guarded streams that hasn't been released, and the write would
+    # actually emit output (zero-byte writes are allowed). A $stdout/$stderr
+    # the user rebound to another object (e.g. capture_io's StringIO) is not
+    # guarded, so writes to it are fine.
     # standard:disable Style/GlobalStdStream — we mean the real stream objects, not the globals
     def check_output!(io, strings)
       return unless armed?
       return unless io.equal?(STDOUT) || io.equal?(STDERR)
+      return if Thread.current.thread_variable_get(:angry_io_released)&.include?(io)
 
       offending = strings.map(&:to_s).reject(&:empty?)
       return if offending.empty?
@@ -131,6 +165,16 @@ module AngryIO
       raise IOError, "AngryIO: a test wrote to #{name}: #{offending.join.inspect}"
     end
     # standard:enable Style/GlobalStdStream
+
+    # Prepend hooks so ActiveSupport::Testing::Stream#capture / #silence_stream
+    # run with the guard disarmed (see ActiveSupportStreamCapture). No-ops when
+    # ActiveSupport isn't loaded.
+    def hook_active_support_stream!
+      require "active_support/testing/stream"
+      ActiveSupport::Testing::Stream.prepend(ActiveSupportStreamCapture)
+    rescue LoadError
+      # ActiveSupport isn't available; nothing to hook.
+    end
   end
 end
 

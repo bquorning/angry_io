@@ -1,7 +1,9 @@
 # frozen_string_literal: true
 
 require "test_helper"
+require "active_support/testing/stream"
 require "logger"
+require "tmpdir"
 
 # Created at load time, before any test runs — the reported bypass: a logger
 # holding a reference to the real $stdout must still be guarded.
@@ -147,6 +149,52 @@ class TestAngryIO < Minitest::Test
   def test_assert_silent
     assert_silent { nil }
   end
+
+  # Reopening $stdout onto a real IO (e.g. a socket after a fork) deliberately
+  # redirects the process's output, so the guard releases the stream: writes
+  # reach the reopened target instead of raising.
+  def test_reopen_onto_io_redirects_writes_to_that_io
+    read, write = IO.pipe
+    saved = $stdout.dup
+    begin
+      $stdout.reopen(write)
+      $stdout.write("redirected\n")
+      $stdout.flush
+    ensure
+      $stdout.reopen(saved)
+      saved.close
+      write.close
+    end
+    captured = read.read
+    read.close
+    assert_equal "redirected\n", captured
+  end
+
+  # Reopening $stderr onto a real IO works the same as $stdout.
+  def test_reopen_onto_io_redirects_stderr_to_that_io
+    saved = $stderr.dup
+    begin
+      $stderr.reopen(File::NULL)
+      warn "hushed"
+    ensure
+      $stderr.reopen(saved)
+      saved.close
+    end
+    assert AngryIO.armed?
+  end
+
+  # A failed reopen must not release the guard — the redirect never happened.
+  # (A closed IO is used to fail the reopen: a failed *path* reopen goes through
+  # freopen(3), which closes the original fd — we don't want to destroy the
+  # test process's real stdout.)
+  def test_failed_reopen_keeps_the_guard
+    read, write = IO.pipe
+    write.close
+    assert_raises(IOError) { $stdout.reopen(write) }
+    assert_raises(IOError) { $stdout.write("still guarded") }
+  ensure
+    read.close
+  end
 end
 
 # A class that opts out by declaring it needs stdout, proving the mechanism.
@@ -155,5 +203,57 @@ class TestAngryIOOptOut < Minitest::Test
 
   def test_guard_is_not_armed_when_opted_out
     refute AngryIO.armed?
+  end
+end
+
+# Exercises the ActiveSupport::Testing::Stream hook. Its `capture` and
+# `silence_stream` reopen $stdout/$stderr onto a Tempfile / IO::NULL — which
+# works natively now that $stdout is the real stream — so the prepended
+# wrapper (installed by hook_active_support_stream! at adapter load) only
+# needs to disarm the guard for the duration.
+class TestAngryIOActiveSupport < Minitest::Test
+  include ActiveSupport::Testing::Stream
+
+  def test_capture_stdout_catches_ruby_and_subprocess_writes
+    assert AngryIO.armed?
+    out = capture(:stdout) do
+      refute AngryIO.armed?
+      $stdout.puts "ruby-write"
+      system("echo subprocess-write")
+    end
+    assert_equal "ruby-write\nsubprocess-write\n", out
+    assert AngryIO.armed?
+  end
+
+  def test_capture_stderr_catches_ruby_and_subprocess_writes
+    assert AngryIO.armed?
+    err = capture(:stderr) do
+      refute AngryIO.armed?
+      warn "ruby-err"
+      system("echo subprocess-err >&2")
+    end
+    assert_equal "ruby-err\nsubprocess-err\n", err
+    assert AngryIO.armed?
+  end
+
+  # `quietly` chains silence_stream over the STDOUT/STDERR constants. The
+  # nested silence_stream calls also exercise the disarmed wrapper's
+  # reentrancy. If the guard weren't disarmed, the block's writes would raise.
+  def test_quietly_silences_writes_and_restores
+    quietly do
+      $stdout.puts "hushed"
+      warn "hushed-err"
+    end
+    assert AngryIO.armed?
+  end
+
+  # silence_stream($stdout) receives the real STDOUT and reopens it onto
+  # IO::NULL itself — no substitution needed. The block's writes are silenced,
+  # and the guard is still armed (and functional) afterwards.
+  def test_silence_stream_silences_writes_and_keeps_the_guard
+    silence_stream($stdout) { $stdout.puts "hushed" }
+    silence_stream($stderr) { warn "hushed-err" }
+    assert AngryIO.armed?
+    assert_raises(IOError) { $stdout.write("still guarded") }
   end
 end
