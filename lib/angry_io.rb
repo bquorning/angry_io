@@ -132,12 +132,17 @@ module AngryIo
     # AngryIo::Stream buffers afterwards. Helpers like Minitest's
     # capture_subprocess_io need this: they reopen $stdout/$stderr onto
     # Tempfiles so subprocesses inherit the file descriptors, which only works
-    # on real IOs. No-ops when no swap is active.
+    # on real IOs. No-ops when no swap is active, or when the real streams are
+    # already current (a nested call inside another with_real_streams — e.g.
+    # ActiveSupport's `capture` wrapping `quietly` — so the inner ensure doesn't
+    # clobber the outer's swap-back).
     def with_real_streams
       swap = Thread.current.thread_variable_get(:angry_io_swap)
       return yield unless swap
 
       real_stdout, real_stderr, stdout_buffer, stderr_buffer = swap
+      return yield if $stdout.equal?(real_stdout) && $stderr.equal?(real_stderr)
+
       $stdout = real_stdout
       $stderr = real_stderr
 
