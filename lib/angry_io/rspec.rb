@@ -42,6 +42,7 @@ module AngryIo
 
       ::RSpec::Matchers::BuiltIn::Output.prepend(FromAnyProcess)
       ::RSpec::Matchers::BuiltIn::CaptureStreamToTempfile.prepend(CaptureStreamToTempfile)
+      AngryIo.hook_active_support_stream!
     end
   end
 end
