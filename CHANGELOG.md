@@ -1,5 +1,11 @@
 ## [Unreleased]
 
+## [0.4.0] - 2026-09-15
+
+- Reopening `$stdout`/`$stderr` onto a real IO (e.g. `$stdout.reopen(File::NULL)`) no longer raises `TypeError` under `AngryIo::Stream`. `Stream#reopen` now delegates an IO argument to the original real stream it replaced (a `dup2` that survives the caller closing the other IO) and hands the global back so writes reach the reopened IO; non-IO arguments still defer to StringIO's own buffer reset. The new `AngryIo.real_stream_for` returns the real stream a swapped buffer replaced.
+- ActiveSupport's `capture` and `silence_stream` (from `ActiveSupport::Testing::Stream`) now work alongside AngryIo. They use the same reopen-onto-IO pattern as `capture_subprocess_io`, so AngryIo now runs them under `with_real_streams`, substituting the real stream for the StringIO buffer that `silence_stream` binds at call time.
+- `AngryIo.with_real_streams` is now reentrant: a nested call (e.g. ActiveSupport's `capture` wrapping `quietly`, whose nested `silence_stream` re-enters the helper) no longer swaps the globals back to the Angry buffers while the outer call still expects the real streams. It no-ops when the real streams are already current.
+
 ## [0.3.0] - 2026-09-06
 
 - Zero-byte writes (e.g. `$stderr.print("")`) no longer raise; `AngryIo::Stream` now raises only when a write would actually emit output. The error message changed from StringIO's `not opened for writing` to `AngryIo::Stream is not writable: ...`, which includes the offending output.
