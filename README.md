@@ -37,13 +37,12 @@ IOError: AngryIO::Stream is not writable: "your output here"
 
 Zero-byte writes (e.g. `$stderr.print("")`) emit nothing, so they are allowed.
 
-If you want to allow test output in some environments but not in others — e.g., allow output when testing locally, but fail on CI — you can configure like this:
+If you want to allow test output in some environments but not in others — e.g., fail on CI, but allow output when testing locally so REPL debuggers like `binding.irb` or `pry` work — set the `enabled` predicate:
 
 ```ruby
-# On by default; turn it off in environments where you'll allow real output.
-AngryIO.configure do |config|
-  config.enabled = -> { ENV["CI"] == "true" }
-end
+# On by default; turn it off in environments where you'll allow real output
+# (e.g. locally, so a debugger can write to stdout without raising).
+AngryIO.enabled = -> { ENV["CI"] == "true" }
 ```
 
 ### Opting out
@@ -83,11 +82,7 @@ end
 
 ## Configuration
 
-`AngryIO.configure` yields a config struct with one field:
-
-| Field              | Default                                 | Description                                                                                                           |
-| ---                | ---                                     | ---                                                                                                                   |
-| `enabled`          | `-> { true }`                           | A callable returning whether AngryIO is active. Invoked once per test, so it can read env vars or feature flags live. |
+`AngryIO.enabled` is a callable returning whether AngryIO is active. It defaults to `-> { true }` and is invoked once per test, so it can read env vars or feature flags live — e.g. `-> { ENV["CI"] == "true" }` to enforce on CI while leaving local debuggers usable.
 
 ## How it works
 

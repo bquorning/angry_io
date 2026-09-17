@@ -1,6 +1,9 @@
 ## [Unreleased]
 
-- Rename the core module from `AngryIo` to `AngryIO` (`AngryIO::Stream`, `AngryIO.configure`, `AngryIO.with_real_streams`, etc.). This is a breaking change: no backwards-compatibility alias is provided, so any code referencing the old `AngryIo` constant must be updated. The lowercase gem name (`angry_io`) and require paths (`angry_io/rspec`, `angry_io/minitest`) are unchanged.
+## [0.5.0] - 2026-09-17
+
+- Replace `AngryIO.configure` / `AngryIO::Config` with a direct `AngryIO.enabled` accessor (still a callable, default `-> { true }`). This is a breaking change: replace `AngryIO.configure { |c| c.enabled = ... }` with `AngryIO.enabled = ...`.
+- Rename the core module from `AngryIo` to `AngryIO` (`AngryIO::Stream`, `AngryIO.enabled`, `AngryIO.with_real_streams`, etc.). This is a breaking change: no backwards-compatibility alias is provided, so any code referencing the old `AngryIo` constant must be updated. The lowercase gem name (`angry_io`) and require paths (`angry_io/rspec`, `angry_io/minitest`) are unchanged.
 
 ## [0.4.0] - 2026-09-15
 

@@ -52,14 +52,14 @@ RSpec.describe AngryIO do
     end
   end
 
-  describe ".configure" do
-    it "yields the config and persists changes" do
+  describe ".enabled" do
+    it "is settable and persists changes" do
       maybe = -> { rand(2) == 0 }
-      AngryIO.configure { |c| c.enabled = maybe }
-      expect(AngryIO.config.enabled).to eq(maybe)
+      AngryIO.enabled = maybe
+      expect(AngryIO.enabled).to eq(maybe)
     ensure
       # Restore the default so later examples don't randomly run unswapped.
-      AngryIO.configure { |c| c.enabled = -> { true } }
+      AngryIO.enabled = -> { true }
     end
   end
 end

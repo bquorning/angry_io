@@ -27,9 +27,8 @@ class TestAngryIO < Minitest::Test
     assert_predicate stream.string, :empty?
   end
 
-  def test_config_defaults
-    config = AngryIO::Config.new
-    assert config.enabled.call
+  def test_enabled_defaults_to_truthy
+    assert AngryIO.enabled.call
   end
 
   def test_around_streams_swaps_and_restores
@@ -47,12 +46,12 @@ class TestAngryIO < Minitest::Test
   end
 
   def test_around_streams_noop_when_disabled
-    AngryIO.configure { |c| c.enabled = -> { false } }
+    AngryIO.enabled = -> { false }
     original = $stdout
     AngryIO.around_streams {}
     assert_equal original, $stdout
   ensure
-    AngryIO.configure { |c| c.enabled = -> { true } }
+    AngryIO.enabled = -> { true }
   end
 
   # The minitest adapter (loaded in test_helper) wraps every test, so $stdout

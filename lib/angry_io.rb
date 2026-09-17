@@ -85,28 +85,18 @@ module AngryIO
     private :capture, :silence_stream
   end
 
-  Config = Struct.new(:enabled) do
-    def initialize
-      self.enabled = -> { true }
-    end
-  end
-
-  @config = Config.new
+  @enabled = -> { true }
 
   class << self
-    attr_reader :config
-
-    def configure
-      yield @config
-    end
+    attr_accessor :enabled
 
     # Swap $stdout and $stderr to AngryIO::Stream instances around the given
     # block, restoring them (and closing the buffers) in an ensure. No-ops when
-    # +opted_out+ is true or when +config.enabled+ returns false, so the block
+    # +opted_out+ is true or when +enabled+ returns false, so the block
     # runs untouched.
     def around_streams(opted_out: false)
       return yield if opted_out
-      return yield unless config.enabled.call
+      return yield unless enabled.call
 
       original_stdout = $stdout
       original_stderr = $stderr
