@@ -1,5 +1,7 @@
 ## [Unreleased]
 
+- Rename the core module from `AngryIo` to `AngryIO` (`AngryIO::Stream`, `AngryIO.configure`, `AngryIO.with_real_streams`, etc.). This is a breaking change: no backwards-compatibility alias is provided, so any code referencing the old `AngryIo` constant must be updated. The lowercase gem name (`angry_io`) and require paths (`angry_io/rspec`, `angry_io/minitest`) are unchanged.
+
 ## [0.4.0] - 2026-09-15
 
 - Reopening `$stdout`/`$stderr` onto a real IO (e.g. `$stdout.reopen(File::NULL)`) no longer raises `TypeError` under `AngryIo::Stream`. `Stream#reopen` now delegates an IO argument to the original real stream it replaced (a `dup2` that survives the caller closing the other IO) and hands the global back so writes reach the reopened IO; non-IO arguments still defer to StringIO's own buffer reset. The new `AngryIo.real_stream_for` returns the real stream a swapped buffer replaced.

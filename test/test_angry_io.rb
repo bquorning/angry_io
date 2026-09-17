@@ -4,21 +4,21 @@ require "test_helper"
 require "active_support/testing/stream"
 require "tmpdir"
 
-class TestAngryIo < Minitest::Test
+class TestAngryIO < Minitest::Test
   def test_stream_raises_on_write
-    assert_raises(IOError) { AngryIo::Stream.new.write("x") }
+    assert_raises(IOError) { AngryIO::Stream.new.write("x") }
   end
 
   def test_stream_raises_on_puts
-    assert_raises(IOError) { AngryIo::Stream.new.puts("x") }
+    assert_raises(IOError) { AngryIO::Stream.new.puts("x") }
   end
 
   def test_stream_raises_on_putc
-    assert_raises(IOError) { AngryIo::Stream.new.putc("x") }
+    assert_raises(IOError) { AngryIO::Stream.new.putc("x") }
   end
 
   def test_stream_allows_zero_byte_writes
-    stream = AngryIo::Stream.new
+    stream = AngryIO::Stream.new
     stream.write("")
     stream.print("")
     stream.printf("")
@@ -28,46 +28,46 @@ class TestAngryIo < Minitest::Test
   end
 
   def test_config_defaults
-    config = AngryIo::Config.new
+    config = AngryIO::Config.new
     assert config.enabled.call
   end
 
   def test_around_streams_swaps_and_restores
     original = $stdout
     inside = nil
-    AngryIo.around_streams { inside = $stdout }
-    assert_kind_of AngryIo::Stream, inside
+    AngryIO.around_streams { inside = $stdout }
+    assert_kind_of AngryIO::Stream, inside
     assert_equal original, $stdout
   end
 
   def test_around_streams_noop_when_opted_out
     original = $stdout
-    AngryIo.around_streams(opted_out: true) {}
+    AngryIO.around_streams(opted_out: true) {}
     assert_equal original, $stdout
   end
 
   def test_around_streams_noop_when_disabled
-    AngryIo.configure { |c| c.enabled = -> { false } }
+    AngryIO.configure { |c| c.enabled = -> { false } }
     original = $stdout
-    AngryIo.around_streams {}
+    AngryIO.around_streams {}
     assert_equal original, $stdout
   ensure
-    AngryIo.configure { |c| c.enabled = -> { true } }
+    AngryIO.configure { |c| c.enabled = -> { true } }
   end
 
   # The minitest adapter (loaded in test_helper) wraps every test, so $stdout
-  # is an AngryIo::Stream for the duration of this example.
+  # is an AngryIO::Stream for the duration of this example.
   def test_minitest_adapter_swaps_stdout_during_test
-    assert_kind_of AngryIo::Stream, $stdout
+    assert_kind_of AngryIO::Stream, $stdout
   end
 
   def test_with_real_streams_restores_outer_streams
     adapter_stream = $stdout
-    AngryIo.around_streams do
+    AngryIO.around_streams do
       seen = nil
-      AngryIo.with_real_streams { seen = $stdout }
+      AngryIO.with_real_streams { seen = $stdout }
       assert_same adapter_stream, seen
-      assert_kind_of AngryIo::Stream, $stdout
+      assert_kind_of AngryIO::Stream, $stdout
       refute_same adapter_stream, $stdout
     end
   end
@@ -75,8 +75,8 @@ class TestAngryIo < Minitest::Test
   # The swap is tracked per thread (not per fiber), so captures running inside
   # a Fiber — e.g. Enumerator-based code — still see it.
   def test_with_real_streams_works_across_fibers
-    seen = Fiber.new { AngryIo.with_real_streams { $stdout } }.resume
-    refute_kind_of AngryIo::Stream, seen
+    seen = Fiber.new { AngryIO.with_real_streams { $stdout } }.resume
+    refute_kind_of AngryIO::Stream, seen
   end
 
   def test_capture_subprocess_io_works_inside_a_fiber
@@ -91,7 +91,7 @@ class TestAngryIo < Minitest::Test
     end
     assert_equal "hello\n", out
     assert_equal "warning\n", err
-    assert_kind_of AngryIo::Stream, $stdout
+    assert_kind_of AngryIO::Stream, $stdout
   end
 
   # capture_io replaces the globals outright (no reopen), so it already works:
@@ -103,7 +103,7 @@ class TestAngryIo < Minitest::Test
     end
     assert_equal "hello\n", out
     assert_equal "warning\n", err
-    assert_kind_of AngryIo::Stream, $stdout
+    assert_kind_of AngryIO::Stream, $stdout
   end
 
   def test_assert_output
@@ -126,10 +126,10 @@ class TestAngryIo < Minitest::Test
     original = File.open(File::NULL, "w")
     $stdout = original
     begin
-      AngryIo.around_streams do
-        assert_kind_of AngryIo::Stream, $stdout
+      AngryIO.around_streams do
+        assert_kind_of AngryIO::Stream, $stdout
         $stdout.reopen(write)
-        refute_kind_of AngryIo::Stream, $stdout
+        refute_kind_of AngryIO::Stream, $stdout
         assert_same original, $stdout
         $stdout.write("redirected\n")
         $stdout.flush
@@ -151,8 +151,8 @@ class TestAngryIo < Minitest::Test
     original = File.open(File::NULL, "w")
     $stderr = original
     begin
-      AngryIo.around_streams do
-        assert_kind_of AngryIo::Stream, $stderr
+      AngryIO.around_streams do
+        assert_kind_of AngryIO::Stream, $stderr
         $stderr.reopen(write)
         assert_same original, $stderr
       end
@@ -167,9 +167,9 @@ class TestAngryIo < Minitest::Test
   # Non-IO args (String/nil) defer to StringIO's own reopen, which resets the
   # buffer — the guard stays in place and writes still raise.
   def test_reopen_onto_string_keeps_the_guard
-    AngryIo.around_streams do
+    AngryIO.around_streams do
       $stdout.reopen("")
-      assert_kind_of AngryIo::Stream, $stdout
+      assert_kind_of AngryIO::Stream, $stdout
       assert_raises(IOError) { $stdout.puts "x" }
     end
   end
@@ -177,9 +177,9 @@ class TestAngryIo < Minitest::Test
   # reopen() with no args resets the StringIO buffer via StringIO#reopen(); the
   # guard stays in place, so writes still raise.
   def test_reopen_with_no_args_resets_buffer_and_keeps_guard
-    AngryIo.around_streams do
+    AngryIO.around_streams do
       $stdout.reopen
-      assert_kind_of AngryIo::Stream, $stdout
+      assert_kind_of AngryIO::Stream, $stdout
       assert_raises(IOError) { $stdout.puts "x" }
     end
   end
@@ -187,7 +187,7 @@ class TestAngryIo < Minitest::Test
   # With no active swap there's no original to delegate to, so an IO arg falls
   # back to StringIO's behavior (raising TypeError), matching a plain StringIO.
   def test_reopen_onto_io_without_swap_raises_like_stringio
-    stream = AngryIo::Stream.new
+    stream = AngryIO::Stream.new
     read, write = IO.pipe
     prev = Thread.current.thread_variable_get(:angry_io_swap)
     Thread.current.thread_variable_set(:angry_io_swap, nil)
@@ -200,14 +200,14 @@ class TestAngryIo < Minitest::Test
     end
   end
 
-  # A swap is active, but `self` is a standalone AngryIo::Stream that wasn't one
+  # A swap is active, but `self` is a standalone AngryIO::Stream that wasn't one
   # of the swapped buffers (someone assigned it to $stdout outside the adapter).
   # There's no original for it to delegate to, so it falls back to StringIO and
   # raises TypeError instead of silently no-op'ing.
   def test_reopen_onto_io_with_swap_but_unmatched_stream_raises
     read, write = IO.pipe
-    standalone = AngryIo::Stream.new
-    AngryIo.around_streams do
+    standalone = AngryIO::Stream.new
+    AngryIO.around_streams do
       assert_raises(TypeError) { standalone.reopen(write) }
     end
   ensure
@@ -217,11 +217,11 @@ class TestAngryIo < Minitest::Test
 end
 
 # A class that opts out by declaring it needs stdout, proving the mechanism.
-class TestAngryIoOptOut < Minitest::Test
+class TestAngryIOOptOut < Minitest::Test
   i_absolutely_need_to_write_to_stdout!
 
   def test_does_not_swap_stdout_when_opted_out
-    refute_kind_of AngryIo::Stream, $stdout
+    refute_kind_of AngryIO::Stream, $stdout
   end
 
   # This class opts out of around_streams, so no swap is active during the
@@ -229,14 +229,14 @@ class TestAngryIoOptOut < Minitest::Test
   # globals.
   def test_with_real_streams_noop_when_no_swap
     original = $stdout
-    AngryIo.with_real_streams { assert_equal original, $stdout }
+    AngryIO.with_real_streams { assert_equal original, $stdout }
     assert_equal original, $stdout
   end
 
   # With no swap active, real_stream_for has nothing to map to and returns nil.
   def test_real_stream_for_returns_nil_without_swap
-    assert_nil AngryIo.real_stream_for($stdout)
-    assert_nil AngryIo.real_stream_for($stderr)
+    assert_nil AngryIO.real_stream_for($stdout)
+    assert_nil AngryIO.real_stream_for($stderr)
   end
 end
 
@@ -245,27 +245,27 @@ end
 # wrapper (installed by hook_active_support_stream! at adapter load) restores
 # the real streams for the duration, then hands the Angry buffer back. Without
 # the hook these would raise TypeError on the StringIO.
-class TestAngryIoActiveSupport < Minitest::Test
+class TestAngryIOActiveSupport < Minitest::Test
   include ActiveSupport::Testing::Stream
 
   def test_capture_stdout_catches_ruby_and_subprocess_writes
-    assert_kind_of AngryIo::Stream, $stdout
+    assert_kind_of AngryIO::Stream, $stdout
     out = capture(:stdout) do
       $stdout.puts "ruby-write"
       system("echo subprocess-write")
     end
     assert_equal "ruby-write\nsubprocess-write\n", out
-    assert_kind_of AngryIo::Stream, $stdout
+    assert_kind_of AngryIO::Stream, $stdout
   end
 
   def test_capture_stderr_catches_ruby_and_subprocess_writes
-    assert_kind_of AngryIo::Stream, $stderr
+    assert_kind_of AngryIO::Stream, $stderr
     err = capture(:stderr) do
       warn "ruby-err"
       system("echo subprocess-err >&2")
     end
     assert_equal "ruby-err\nsubprocess-err\n", err
-    assert_kind_of AngryIo::Stream, $stderr
+    assert_kind_of AngryIO::Stream, $stderr
   end
 
   # `quietly` chains silence_stream over the STDOUT/STDERR constants (real IOs);
@@ -278,11 +278,11 @@ class TestAngryIoActiveSupport < Minitest::Test
       $stdout.puts "hushed"
       warn "hushed-err"
     end
-    assert_kind_of AngryIo::Stream, $stdout
-    assert_kind_of AngryIo::Stream, $stderr
+    assert_kind_of AngryIO::Stream, $stdout
+    assert_kind_of AngryIO::Stream, $stderr
   end
 
-  # `silence_stream($stdout)` is called with the AngryIo buffer (bound at call
+  # `silence_stream($stdout)` is called with the AngryIO buffer (bound at call
   # time). The wrapper must substitute the real stream so AS reopens *it* onto
   # IO::NULL — otherwise the block's writes leak to the real stdout. Use a plain
   # File as the real stdout (via a nested around_streams) so a leak shows up as
@@ -294,10 +294,10 @@ class TestAngryIoActiveSupport < Minitest::Test
       probe = File.open(File.join(dir, "probe.log"), "w+")
       $stdout = probe
       begin
-        AngryIo.around_streams do
-          assert_kind_of AngryIo::Stream, $stdout
+        AngryIO.around_streams do
+          assert_kind_of AngryIO::Stream, $stdout
           silence_stream($stdout) { $stdout.puts "hushed" }
-          assert_kind_of AngryIo::Stream, $stdout
+          assert_kind_of AngryIO::Stream, $stdout
         end
         probe.rewind
         assert_equal "", probe.read
@@ -316,10 +316,10 @@ class TestAngryIoActiveSupport < Minitest::Test
       probe = File.open(File.join(dir, "probe.err"), "w+")
       $stderr = probe
       begin
-        AngryIo.around_streams do
-          assert_kind_of AngryIo::Stream, $stderr
+        AngryIO.around_streams do
+          assert_kind_of AngryIO::Stream, $stderr
           silence_stream($stderr) { warn "hushed-err" }
-          assert_kind_of AngryIo::Stream, $stderr
+          assert_kind_of AngryIO::Stream, $stderr
         end
         probe.rewind
         assert_equal "", probe.read

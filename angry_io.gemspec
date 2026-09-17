@@ -4,12 +4,12 @@ require_relative "lib/angry_io/version"
 
 Gem::Specification.new do |spec|
   spec.name = "angry_io"
-  spec.version = AngryIo::VERSION
+  spec.version = AngryIO::VERSION
   spec.authors = ["Benjamin Quorning"]
   spec.email = ["bquorning@zendesk.com"]
 
   spec.summary = "An IO that raises on write, to keep tests from polluting stdout/stderr."
-  spec.description = "AngryIo replaces $stdout/$stderr during tests with an IO that raises on write, so accidental output fails loudly instead of cluttering CI logs. Ships RSpec and Minitest adapters that self-register, gated by a configurable enabled callable."
+  spec.description = "AngryIO replaces $stdout/$stderr during tests with an IO that raises on write, so accidental output fails loudly instead of cluttering CI logs. Ships RSpec and Minitest adapters that self-register, gated by a configurable enabled callable."
   spec.homepage = "https://github.com/bquorning/angry_io"
   spec.license = "MIT"
   spec.required_ruby_version = ">= 3.2.0"

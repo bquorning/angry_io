@@ -1,5 +1,5 @@
 # frozen_string_literal: true
 
-module AngryIo
+module AngryIO
   VERSION = "0.4.0"
 end

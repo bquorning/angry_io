@@ -3,7 +3,7 @@
 require "stringio"
 require_relative "angry_io/version"
 
-module AngryIo
+module AngryIO
   # An IO that raises when you write to it, so tests can't silently pollute
   # stdout/stderr. Zero-byte writes like `$stderr.print("")` emit nothing and
   # are allowed; anything that would produce output raises an IOError.
@@ -18,7 +18,7 @@ module AngryIo
       strings.each do |string|
         next if string.to_s.empty?
 
-        raise IOError, "AngryIo::Stream is not writable: \"#{string}\""
+        raise IOError, "AngryIO::Stream is not writable: \"#{string}\""
       end
       super
     end
@@ -26,7 +26,7 @@ module AngryIo
     # StringIO#putc writes directly in C, bypassing #write. It always emits a
     # byte, so it always refuses.
     def putc(char)
-      raise IOError, "AngryIo::Stream is not writable: \"#{char}\""
+      raise IOError, "AngryIO::Stream is not writable: \"#{char}\""
     end
 
     # `IO#reopen(io)` redirects a real $stdout/$stderr onto another IO (a
@@ -69,17 +69,17 @@ module AngryIo
   # capture/silence, the same way Minitest's capture_subprocess_io is handled.
   module ActiveSupportStreamCapture
     def capture(stream)
-      AngryIo.with_real_streams { super }
+      AngryIO.with_real_streams { super }
     end
 
     def silence_stream(stream)
-      # `stream` is bound at call time, so under AngryIo it's the StringIO
+      # `stream` is bound at call time, so under AngryIO it's the StringIO
       # buffer — which AS can't actually reopen onto IO::NULL (it just resets
       # the buffer), leaking the block's writes to the real stream. Substitute
       # the real stream it replaced so AS silences (and the block writes to) the
       # real IO.
-      real = AngryIo.real_stream_for(stream)
-      AngryIo.with_real_streams { super(real || stream) }
+      real = AngryIO.real_stream_for(stream)
+      AngryIO.with_real_streams { super(real || stream) }
     end
 
     private :capture, :silence_stream
@@ -100,7 +100,7 @@ module AngryIo
       yield @config
     end
 
-    # Swap $stdout and $stderr to AngryIo::Stream instances around the given
+    # Swap $stdout and $stderr to AngryIO::Stream instances around the given
     # block, restoring them (and closing the buffers) in an ensure. No-ops when
     # +opted_out+ is true or when +config.enabled+ returns false, so the block
     # runs untouched.
@@ -129,7 +129,7 @@ module AngryIo
     end
 
     # Run the block with the pre-swap $stdout/$stderr restored, re-swapping the
-    # AngryIo::Stream buffers afterwards. Helpers like Minitest's
+    # AngryIO::Stream buffers afterwards. Helpers like Minitest's
     # capture_subprocess_io need this: they reopen $stdout/$stderr onto
     # Tempfiles so subprocesses inherit the file descriptors, which only works
     # on real IOs. No-ops when no swap is active, or when the real streams are
@@ -154,7 +154,7 @@ module AngryIo
       end
     end
 
-    # If `stream` is one of the active swap's AngryIo::Stream buffers, return the
+    # If `stream` is one of the active swap's AngryIO::Stream buffers, return the
     # real stream it replaced; otherwise nil. Used by
     # ActiveSupportStreamCapture#silence_stream to redirect silencing onto the
     # real IO instead of the StringIO buffer.

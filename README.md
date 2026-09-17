@@ -1,8 +1,8 @@
-# AngryIo
+# AngryIO
 
 Friends don't let friends write tests or specs that output to stdout/stderr. When you look at your test output, you should only see green dots, right?
 
-AngryIo replaces `$stdout` and `$stderr` during your test suite with an IO that _raises on write_, so accidental output fails loudly instead of quietly cluttering your output. It ships self-registering adapters for both RSpec and Minitest, gated by a configurable `enabled` callable.
+AngryIO replaces `$stdout` and `$stderr` during your test suite with an IO that _raises on write_, so accidental output fails loudly instead of quietly cluttering your output. It ships self-registering adapters for both RSpec and Minitest, gated by a configurable `enabled` callable.
 
 ## Installation
 
@@ -29,10 +29,10 @@ Depending on your test framework, you should require either `angry_io/rspec` or 
 require "angry_io/rspec"      # or "angry_io/minitest"
 ```
 
-By default, AngryIo is always on, and every test that writes to `$stdout` or `$stderr` now raises:
+By default, AngryIO is always on, and every test that writes to `$stdout` or `$stderr` now raises:
 
 ```
-IOError: AngryIo::Stream is not writable: "your output here"
+IOError: AngryIO::Stream is not writable: "your output here"
 ```
 
 Zero-byte writes (e.g. `$stderr.print("")`) emit nothing, so they are allowed.
@@ -41,7 +41,7 @@ If you want to allow test output in some environments but not in others — e.g.
 
 ```ruby
 # On by default; turn it off in environments where you'll allow real output.
-AngryIo.configure do |config|
+AngryIO.configure do |config|
   config.enabled = -> { ENV["CI"] == "true" }
 end
 ```
@@ -83,15 +83,15 @@ end
 
 ## Configuration
 
-`AngryIo.configure` yields a config struct with one field:
+`AngryIO.configure` yields a config struct with one field:
 
 | Field              | Default                                 | Description                                                                                                           |
 | ---                | ---                                     | ---                                                                                                                   |
-| `enabled`          | `-> { true }`                           | A callable returning whether AngryIo is active. Invoked once per test, so it can read env vars or feature flags live. |
+| `enabled`          | `-> { true }`                           | A callable returning whether AngryIO is active. Invoked once per test, so it can read env vars or feature flags live. |
 
 ## How it works
 
-`AngryIo::Stream` is a `StringIO` whose write methods raise an `IOError` when given anything but an empty string. Around each test, the adapter swaps `$stdout` and `$stderr` to fresh `AngryIo::Stream` instances and restores the originals (closing the buffers) in an `ensure`.
+`AngryIO::Stream` is a `StringIO` whose write methods raise an `IOError` when given anything but an empty string. Around each test, the adapter swaps `$stdout` and `$stderr` to fresh `AngryIO::Stream` instances and restores the originals (closing the buffers) in an `ensure`.
 
 ## Development
 
@@ -113,4 +113,4 @@ The gem is available as open source under the terms of the [MIT License](https:/
 
 ## Code of Conduct
 
-Everyone interacting in the AngryIo project's codebases, issue trackers, chat rooms, and mailing lists is expected to follow the [code of conduct](https://github.com/bquorning/angry_io/blob/main/CODE_OF_CONDUCT.md).
+Everyone interacting in the AngryIO project's codebases, issue trackers, chat rooms, and mailing lists is expected to follow the [code of conduct](https://github.com/bquorning/angry_io/blob/main/CODE_OF_CONDUCT.md).

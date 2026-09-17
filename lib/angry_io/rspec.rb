@@ -2,11 +2,11 @@
 
 require "angry_io"
 
-# Registers an +around+ hook that swaps $stdout/$stderr to AngryIo::Stream
+# Registers an +around+ hook that swaps $stdout/$stderr to AngryIO::Stream
 # instances during each example, unless the example opts out via the
 # +:i_absolutely_need_to_write_to_stdout+ metadata. Force-loads rspec-core so
 # registration works regardless of Bundler.require ordering.
-module AngryIo
+module AngryIO
   module RSpec
     # The to_*_from_any_process matchers reopen $stdout/$stderr onto Tempfiles
     # so subprocesses inherit the file descriptors, which fails on
@@ -15,11 +15,11 @@ module AngryIo
     # stream...
     module FromAnyProcess
       def to_stdout_from_any_process
-        AngryIo.with_real_streams { super }
+        AngryIO.with_real_streams { super }
       end
 
       def to_stderr_from_any_process
-        AngryIo.with_real_streams { super }
+        AngryIO.with_real_streams { super }
       end
     end
 
@@ -27,7 +27,7 @@ module AngryIo
     # are captured by the Tempfile instead of raising against the Angry stream.
     module CaptureStreamToTempfile
       def capture(block)
-        AngryIo.with_real_streams { super }
+        AngryIO.with_real_streams { super }
       end
     end
 
@@ -36,17 +36,17 @@ module AngryIo
         config.around do |example|
           opt_out = example.metadata.key?(:i_absolutely_need_to_write_to_stdout) &&
             example.metadata[:i_absolutely_need_to_write_to_stdout]
-          AngryIo.around_streams(opted_out: opt_out) { example.run }
+          AngryIO.around_streams(opted_out: opt_out) { example.run }
         end
       end
 
       ::RSpec::Matchers::BuiltIn::Output.prepend(FromAnyProcess)
       ::RSpec::Matchers::BuiltIn::CaptureStreamToTempfile.prepend(CaptureStreamToTempfile)
-      AngryIo.hook_active_support_stream!
+      AngryIO.hook_active_support_stream!
     end
   end
 end
 
 require "rspec/core"
 require "rspec/expectations"
-AngryIo::RSpec.setup!
+AngryIO::RSpec.setup!

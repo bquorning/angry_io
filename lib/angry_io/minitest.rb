@@ -3,14 +3,14 @@
 require "angry_io"
 
 # Prepends an override of +Minitest::Test#run+ that swaps $stdout/$stderr to
-# AngryIo::Stream instances around each test. A test class opts out by calling
+# AngryIO::Stream instances around each test. A test class opts out by calling
 # +i_absolutely_need_to_write_to_stdout!+ in its body. Force-loads Minitest so
 # registration works regardless of Bundler.require ordering.
-module AngryIo
+module AngryIO
   module Minitest
     module Adapter
       def run
-        AngryIo.around_streams(opted_out: self.class.i_absolutely_need_to_write_to_stdout?) { super }
+        AngryIO.around_streams(opted_out: self.class.i_absolutely_need_to_write_to_stdout?) { super }
       end
     end
 
@@ -30,7 +30,7 @@ module AngryIo
     # real streams for the duration of the capture.
     module CaptureSubprocessIo
       def capture_subprocess_io(&block)
-        AngryIo.with_real_streams { super }
+        AngryIO.with_real_streams { super }
       end
     end
 
@@ -38,10 +38,10 @@ module AngryIo
       ::Minitest::Test.extend(ClassMethods)
       ::Minitest::Test.prepend(Adapter)
       ::Minitest::Assertions.prepend(CaptureSubprocessIo)
-      AngryIo.hook_active_support_stream!
+      AngryIO.hook_active_support_stream!
     end
   end
 end
 
 require "minitest"
-AngryIo::Minitest.setup!
+AngryIO::Minitest.setup!

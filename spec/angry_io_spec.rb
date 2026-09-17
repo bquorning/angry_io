@@ -1,20 +1,20 @@
 # frozen_string_literal: true
 
-RSpec.describe AngryIo do
+RSpec.describe AngryIO do
   it "raises on write" do
-    expect { AngryIo::Stream.new.write("x") }.to raise_error(IOError)
+    expect { AngryIO::Stream.new.write("x") }.to raise_error(IOError)
   end
 
   it "raises on puts" do
-    expect { AngryIo::Stream.new.puts("x") }.to raise_error(IOError)
+    expect { AngryIO::Stream.new.puts("x") }.to raise_error(IOError)
   end
 
   it "raises on putc" do
-    expect { AngryIo::Stream.new.putc("x") }.to raise_error(IOError)
+    expect { AngryIO::Stream.new.putc("x") }.to raise_error(IOError)
   end
 
   it "allows zero-byte writes" do
-    stream = AngryIo::Stream.new
+    stream = AngryIO::Stream.new
     stream.write("")
     stream.print("")
     stream.printf("")
@@ -24,13 +24,13 @@ RSpec.describe AngryIo do
   end
 
   # The RSpec adapter (loaded in spec_helper) wraps every example, so $stdout
-  # is an AngryIo::Stream for the duration of this example.
-  it "swaps $stdout to an AngryIo::Stream during the example" do
-    expect($stdout).to be_an(AngryIo::Stream)
+  # is an AngryIO::Stream for the duration of this example.
+  it "swaps $stdout to an AngryIO::Stream during the example" do
+    expect($stdout).to be_an(AngryIO::Stream)
   end
 
   it "does not swap when opted out", :i_absolutely_need_to_write_to_stdout do
-    expect($stdout).not_to be_an(AngryIo::Stream)
+    expect($stdout).not_to be_an(AngryIO::Stream)
   end
 
   describe "output matcher with from_any_process" do
@@ -46,20 +46,20 @@ RSpec.describe AngryIo do
       expect { $stdout.puts "hi" }.to output("hi\n").to_stdout_from_any_process
     end
 
-    it "restores the AngryIo::Stream afterwards" do
+    it "restores the AngryIO::Stream afterwards" do
       expect { system("true") }.to output("").to_stdout_from_any_process
-      expect($stdout).to be_an(AngryIo::Stream)
+      expect($stdout).to be_an(AngryIO::Stream)
     end
   end
 
   describe ".configure" do
     it "yields the config and persists changes" do
       maybe = -> { rand(2) == 0 }
-      AngryIo.configure { |c| c.enabled = maybe }
-      expect(AngryIo.config.enabled).to eq(maybe)
+      AngryIO.configure { |c| c.enabled = maybe }
+      expect(AngryIO.config.enabled).to eq(maybe)
     ensure
       # Restore the default so later examples don't randomly run unswapped.
-      AngryIo.configure { |c| c.enabled = -> { true } }
+      AngryIO.configure { |c| c.enabled = -> { true } }
     end
   end
 end
