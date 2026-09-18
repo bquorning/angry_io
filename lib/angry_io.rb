@@ -20,13 +20,21 @@ module AngryIO
     end
 
     # syswrite and write_nonblock bypass #write, so they need their own guards.
+    # Both warn ("syswrite for buffered IO") when the stream has buffered
+    # output pending — and buffered output can be there without us knowing
+    # (e.g. the test runner's progress dots, printed between tests while the
+    # guard is unarmed). The WarningGuard would turn that warning into a raise
+    # against an innocent write, so flush first while armed: the pending output
+    # goes out in order, the buffer stays clean, and no warning fires.
     def syswrite(string)
+      flush if AngryIO.armed?
       result = super
       AngryIO.check_output!(self, [string])
       result
     end
 
     def write_nonblock(string, **options)
+      flush if AngryIO.armed?
       result = super
       AngryIO.check_output!(self, [string])
       result
@@ -162,7 +170,13 @@ module AngryIO
       return if offending.empty?
 
       name = io.equal?(STDOUT) ? "$stdout" : "$stderr"
-      raise IOError, "AngryIO: a test wrote to #{name}: #{offending.join.inspect}"
+      # Flush so the offending line really does appear right before the failure
+      # even when the stream is block-buffered ($stdout.sync == false, e.g. on
+      # CI or under RSpec) — and so the buffer is left empty, keeping a later
+      # syswrite from tripping Ruby's "syswrite for buffered IO" warning (which
+      # WarningGuard turns into a raise) in an innocent test.
+      io.flush
+      raise IOError, "AngryIO: a test wrote to #{name}:\n  #{offending.join}"
     end
     # standard:enable Style/GlobalStdStream
 

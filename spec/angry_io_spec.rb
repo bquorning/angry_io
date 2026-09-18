@@ -14,7 +14,7 @@ RSpec.describe AngryIO do
   end
 
   it "raises on write, after letting the output through" do
-    expect { $stdout.write("bang") }.to raise_error(IOError, /\$stdout.*bang/)
+    expect { $stdout.write("bang") }.to raise_error(IOError, /\$stdout.*bang/m)
   end
 
   it "raises on puts" do
@@ -36,6 +36,20 @@ RSpec.describe AngryIO do
     $stdout << ""
     $stdout.syswrite("")
     $stderr.print("")
+  end
+
+  # A raising write must flush the stream; otherwise its buffered output makes
+  # a later syswrite (even a zero-byte one) trip Ruby's "syswrite for buffered
+  # IO" warning, which the WarningGuard turns into a raise against an innocent
+  # write. (Force sync off so the example doesn't silently go vacuous if the
+  # runner ever sets $stdout.sync = true, like Minitest does.)
+  it "flushes the stream when a write raises" do
+    sync = $stdout.sync
+    $stdout.sync = false
+    expect { $stdout.write("buffered") }.to raise_error(IOError)
+    $stdout.syswrite("")
+  ensure
+    $stdout.sync = sync
   end
 
   it "does not arm when opted out", :i_absolutely_need_to_write_to_stdout do

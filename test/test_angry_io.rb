@@ -78,6 +78,21 @@ class TestAngryIO < Minitest::Test
     $stderr.print("")
   end
 
+  # A raising write must flush the stream: otherwise its buffered output makes
+  # a later syswrite (even a zero-byte one) trip Ruby's "syswrite for buffered
+  # IO" warning, which the WarningGuard turns into a raise against an innocent
+  # write — failing an unrelated test depending on random test order.
+  # (Minitest itself sets $stdout.sync = true, so force buffering off to
+  # exercise this; RSpec leaves sync false, which is where the bug bites.)
+  def test_raising_writes_flush_the_stream
+    sync = $stdout.sync
+    $stdout.sync = false
+    assert_raises(IOError) { $stdout.write("buffered") }
+    $stdout.syswrite("")
+  ensure
+    $stdout.sync = sync
+  end
+
   # A logger created before the test started holds a reference to the real
   # STDOUT object. Because the guard lives on that object (not on the $stdout
   # global), logger writes are caught too.
